@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <script type="module">
+
+        import { io } from 'https://cdn.socket.io/4.3.2/socket.io.esm.min.js'
+        const getUsername = async () => {
+            const username = localStorage.getItem('usernmame');
+            if (username) {
+                return username
+            } 
+            const res = await fetch('https://random-data-api.com/api/users/random_user')
+            const { username: randomUsername } = await res.json();
+            localStorage.setItem('username', randomUsername)
+            return randomUsername;
+        }
+        const socket = io({
+            auth: { // Todo lo que contenga este auth se incluye en el mensaje
+                username: await getUsername(),
+                serverOffset: 0 // Nos permite saber donde se ha quedado el cliente
+            }
+        });
+        const form = document.getElementById("form");
+        const input = document.getElementById("input");
+        const messages = document.getElementById("messages");
+        
+        socket.on('chat message', (msg, serverOffset, username) => { // Cuando se emita un mensaje de chat
+            console.log(username);
+            const item = `<li>
+                <p>${msg}</p>
+                <small>${username}<small>
+                </li>`; // Crea un item con el mensage
+            messages.insertAdjacentHTML('beforeend', item); // Guarda el item con el mensaje
+            socket.auth.serverOffset = serverOffset; // Actualiza donde se ha quedado el cliente en el último chat
+            messages.scrollTop = messages.scrollHeight;
+        });
+
+        form.addEventListener('submit', (e) => {
+            e.preventDefault();
+            if (input.value) { // Si el form tiene un mensaje, lo envia y vacia el form
+                socket.emit('chat message', input.value);
+                input.value = '';
+            }
+        });
+
+    </script>
+    <style>
+        *,
+        *::before,
+        *::after{
+            box-sizing: border-box;
+        }
+
+        :root {
+            color-scheme: ligth dark;
+        }
+
+        body{
+            margin: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+            display: grid;
+            place-content: center;
+            height: 100vh;
+            padding: 36px;
+            grid-template-rows: 1fr;
+        }
+
+        #chat{
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            overflow: hidden;
+            width: 350px;
+            height: 80vh;
+            position: relative;
+        }
+
+        #form{
+            bottom: 0;
+            display: flex;
+            height: 48px;
+            left: 0;
+            padding: 4px;
+            position: absolute;
+            right: 0;   
+        }
+
+        #input{
+            border-radius: 9999px;
+            border: 1px solid #eee;
+            flex: 1;
+            margin: 4px;
+            padding: 0 8px;
+        }
+
+        #input:focus{
+            outline: 0;
+        }
+
+        #form > button{
+            background-color: #09f;
+            color: #fff;
+            border: 0;
+            margin: 4px;
+            border-radius: 4px;
+        }
+
+        #form > button:hover{
+            background-color: #0cf;
+            cursor: pointer;
+        }
+
+        #messages{
+            list-style-type: none;
+            margin: 0;
+            padding: 0;
+            /* agregamos scroll */
+            overflow-y: scroll;
+            height: 100%;
+            scroll-behavior: smooth;
+            padding-bottom: 48px; 
+        }
+
+        #messages > li{
+            padding: .5rem 1rem;
+        }
+
+        #messages > li:nth-child(odd){
+            background: #7c7c7c;
+        }
+    </style>
+</head>
+<body>
+    <h1>Standard chat real-time</h1>
+    <section id="chat">
+        <ul id="messages"></ul>
+        <form id="form">
+            <input type="text" name="message" id="input" placeholder="Type a message..." autocomplete="off">
+            <button type='submit'>Send</button>
+        </form>
+    </section>
+
+</body>
+</html>
